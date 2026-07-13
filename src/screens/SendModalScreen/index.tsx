@@ -100,7 +100,7 @@ export function SendModalScreen() {
         const checkNetwork = async () => {
             try {
                 const state = await Network.getNetworkStateAsync();
-                setIsHardwareOffline(!state.isConnected || !state.isInternetReachable);
+                setIsHardwareOffline(!state.isConnected || state.isInternetReachable === false);
             } catch (e) {
                 setIsHardwareOffline(false);
             }
@@ -331,32 +331,6 @@ export function SendModalScreen() {
                 rawTokenRef.current = result.encoded;
                 setEncodedToken(result.encoded);
                 setOperationId(result.id);
-            } else if (sendMode === 'link') {
-                result = await walletService.send(activeMintUrl, amountSats);
-                rawTokenRef.current = result.token;
-                const cashuToken = result.token;
-
-                // 1. Generate 32 bytes random secret_key
-                const secretKeyBytes = crypto.getRandomValues(new Uint8Array(32));
-                const secretKeyHex = Buffer.from(secretKeyBytes).toString('hex');
-
-                // 2. Build Nostr event
-                const { buildEcashNostrEvent } = require('~/utils/ecashSharing');
-                const { event } = buildEcashNostrEvent(cashuToken, secretKeyHex);
-
-                // 3. Publish to relays
-                const { SimplePool } = require('nostr-tools');
-                const { RELAYS } = require('~/services/core/nostrService');
-                const pool = new SimplePool();
-                await Promise.any(pool.publish(RELAYS, event));
-                pool.close(RELAYS);
-
-                // 4. Construct share link
-                const websiteUrl = 'https://bey.cash/c/';
-                const shareLink = `${websiteUrl}#${secretKeyHex}`;
-
-                setEncodedToken(shareLink);
-                setOperationId(result.id);
             } else {
                 result = await walletService.send(activeMintUrl, amountSats);
                 rawTokenRef.current = result.token;
@@ -375,7 +349,7 @@ export function SendModalScreen() {
             historyService.tagHistoryVia(
                 activeMintUrl,
                 'send',
-                sendMode === 'link' ? 'ecash_link' : 'ecash_create',
+                'ecash_create',
                 computedExpiry ? {
                     expiresAt: computedExpiry,
                     expiryHours: expiryHours,
@@ -641,7 +615,7 @@ export function SendModalScreen() {
                         console.log('[SendModalScreen] Rendering step: amount, sendMode:', sendMode, 'isOffline:', isOffline);
                         return null;
                     })()}
-                    {(sendMode === 'standard' || sendMode === 'link') && (
+                    {sendMode === 'standard' && (
                         <AmountStage
                             amount={amount}
                             setAmount={setAmount}
