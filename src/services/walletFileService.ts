@@ -16,8 +16,6 @@
  *   theme: "system" | "light" | "dark",
  *   exportedAt: "ISO date"
  * }
- * }
- * }
  *
  * Export flow:
  *   1. Reads mnemonic, trusted mints, and settings from the live stores/repos
